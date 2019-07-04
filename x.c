@@ -9,7 +9,7 @@
 #include <X11/Xft/Xft.h>
 #include <time.h>
 
-typedef struct _BUFFER_THREAD_MUTEX BTM;
+typedef struct _SHARED Shared;
 
 typedef struct {
 	Display* dpy;
@@ -162,7 +162,7 @@ void xreset_blink_time(){
 void
 xrun(void* param)
 {
-	BTM* btm = (BTM*) param;
+	Shared* shared = (Shared*) param;
 
 	XSelectInput(xw.dpy, xw.win, KeyPressMask); // | KeyReleaseMask
 
@@ -187,9 +187,9 @@ xrun(void* param)
 				ret_lookup_string = XLookupString(e, buffer, 
 						bytes_buffer, &ksym, NULL);
 
-				pthread_mutex_lock(btm->mutex);
-				queue_push(&btm->q, ksym);
-				pthread_mutex_unlock(btm->mutex);
+				shared_lock(shared);
+				queue_push(&shared->buffer, ksym);
+				shared_unlock(shared);
 
 				// break if press esc
 				if(ksym == XK_Escape)

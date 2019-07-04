@@ -2,17 +2,30 @@
 #include "te.h"
 #include "x.h"
 #include "queue.h"
+#include "io.h"
 
 //#include <unistd.h> //sleep
 #include <pthread.h>
-#include <time.h>
 
-typedef struct _BUFFER_THREAD_MUTEX BTM;
+typedef struct _SHARED Shared;
 
 /* globals */
-BTM btm_global;
+Shared shared_global;
 
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+
+void
+shared_lock(Shared* shared)
+{
+	pthread_mutex_lock(shared->mutex);
+}
+
+void
+shared_unlock(Shared* shared)
+{
+	pthread_mutex_unlock(shared->mutex);
+}
+
 //queue buffer;
 
 void*
@@ -30,32 +43,9 @@ void*
 ioAPI(void* param)
 {
 	printf("\nRunning thread ioAPI...\n");
-	BTM* btm = (BTM*) param;
-	
-	clock_t t1 = clock(), t2;
-	int period = 200;// 200ms
-	int div = CLOCKS_PER_SEC/1000;//ms
-	
-	int  ksym;
-	int not_break = 1;
-	while(not_break){
-		t2 = clock();
-		if( (t2-t1)/div > 200){
-			t1 = clock();
-			pthread_mutex_lock(btm->mutex);
-			while(!queue_empty(&btm->q)){
-				ksym = queue_pop(&btm->q);
-				if(ksym>31 && ksym<127){	
-					printf("%c", (char)ksym);
-				}
-				if(ksym == XK_Escape){ //esc pressed
-					not_break = 0; //break
-					break;
-				}
-			}
-			pthread_mutex_unlock(btm->mutex);
-		}
-	}
+	io_init();
+	io_run(param);
+	io_free();
 	printf("\nclosing thread ioAPI...\n");
 }
 
@@ -63,17 +53,17 @@ ioAPI(void* param)
 int
 main()
 {
-	btm_global.mutex = &mutex;
-	queue_init(&btm_global.q, 50);
+	shared_global.mutex = &mutex;
+	queue_init(&shared_global.buffer, 50);
 
 	pthread_t thread_xapi_id;
 	pthread_t thread_ioapi_id;
 
 	printf("\nCreating thread xAPI...\n");	
-	pthread_create(&thread_xapi_id, NULL, xAPI, &btm_global);
+	pthread_create(&thread_xapi_id, NULL, xAPI, &shared_global);
 
 	printf("\nCreating thread ioAPI..\n");
-	pthread_create(&thread_ioapi_id, NULL, ioAPI, &btm_global);
+	pthread_create(&thread_ioapi_id, NULL, ioAPI, &shared_global);
 	pthread_join(thread_ioapi_id, NULL);
 
 	

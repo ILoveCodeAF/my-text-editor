@@ -4,9 +4,12 @@
 #include <pthread.h>
 #include "queue.h"
 
-struct _BUFFER_THREAD_MUTEX {
+struct _SHARED {
 	pthread_mutex_t* mutex;
-	struct _QUEUE q;
+	struct _QUEUE buffer;
 };
+
+void shared_lock(struct _SHARED*);
+void shared_unlock(struct _SHARED*);
 
 #endif
