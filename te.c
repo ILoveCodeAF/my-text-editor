@@ -83,38 +83,4 @@ main(int argc, char** argv)
 	
 	return 0;
 }
-//int
-//main(int argc, char** argv)
-//{
-//	shared_global.mutex = &mutex;
-//	queue_init(&shared_global.buffer, 50);
-//	char* filename = "newfile.txt";
-//
-//	if(argc > 1){
-//		shared_global.filename = argv[1];
-//	}
-//	else
-//		shared_global.filename = filename;
-//
-//	printf("filename: %s\n", shared_global.filename);
-//
-//	//pthread_t thread_xapi_id;
-//	pthread_t thread_ioapi_id;
-//
-//	printf("\nCreating thread xAPI...\n");	
-//	//pthread_create(&thread_xapi_id, NULL, xAPI, &shared_global);
-//	printf("\nRunning thread xAPI...\n");
-//	xinit(&shared_global);
-//	xrun();
-//	xfree();
-//	xclose();
-//
-//	printf("\nCreating thread ioAPI..\n");
-//	pthread_create(&thread_ioapi_id, NULL, ioAPI, &shared_global);
-//	pthread_join(thread_ioapi_id, NULL);
-//
-//	printf("\nClosing thread xAPI...\n");
-//
-//	
-//	return 0;
-//}
+
