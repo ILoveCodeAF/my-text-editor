@@ -14,6 +14,11 @@ line_init(Line* line)
 	line->max_size = 1;
 	line->next = 0;
 	line->characters = (char*)malloc(line->max_size*sizeof(char));
+//int i = 0;
+//while(i < line->max_size){
+//	line->characters[i] = 0;
+//	++i;
+//}
 }
 
 void
@@ -26,14 +31,24 @@ line_inc_max_size(Line* line)
 		temp[i] = line->characters[i];
 		++i;
 	}
+//while(i<line->max_size){
+//	temp[i] = 0;
+//	++i;
+//}
 	free(line->characters);
 	line->characters = temp;
 }
 
 int
-line_lenght(Line* line)
+line_length(Line* line)
 {
 	return line->next;
+}
+
+void
+line_add(Line* line, char c)
+{
+	line_add_char(line, c, line->next+1);
 }
 
 void
@@ -59,6 +74,12 @@ line_add_char(Line* line, char c, int position)
 }
 
 void
+line_delete(Line* line)
+{
+	line_delete_char(line, line->next+1);
+}
+
+void
 line_delete_char(Line* line, int position)
 {
 	if(position<line->next){
@@ -81,11 +102,12 @@ line_get_char(Line* line, int position)
 void
 line_print(Line* line)
 {
-	int i = 0;
-	while(i<line->next){
-		printf("%c", line->characters[i]);
-		++i;
-	}
+//int i = 0;
+//while(i<line->next){
+//	printf("%c", line->characters[i]);
+//	++i;
+//}
+	printf("%.*s", line_length(line), line->characters);
 }
 
 void

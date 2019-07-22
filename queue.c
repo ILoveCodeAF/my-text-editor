@@ -3,6 +3,8 @@
 #include <stdio.h>
 
 typedef struct _QUEUE queue;
+/* define type of elements */
+typedef int _TYPE;
 
 void
 queue_init(queue* q, int size)
@@ -48,7 +50,7 @@ queue_full(queue* q)
 }
 
 void
-queue_push(queue* q, int n)
+queue_push(queue* q, _TYPE n)
 {
 	if(!queue_full(q)){
 		if(q->back == q->max_size){
@@ -60,7 +62,7 @@ queue_push(queue* q, int n)
 	}
 }
 
-int
+_TYPE
 queue_pop(queue* q)
 {
 	if(!queue_empty(q)){

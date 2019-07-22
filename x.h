@@ -3,15 +3,15 @@
 
 #include <X11/Xft/Xft.h>
 
-void xinit();
-int xloadfont();
-void xdrawrect(int, int, int, int, XftColor*);
-void xdrawcursor(XftColor*);
-void xredraw();
+void xinit(void* param);
+//int xloadfont();
+//void xdrawrect(int, int, int, int, XftColor*);
+//void xdrawcursor(XftColor*);
+//void xredraw();
 void xfree();
 void xclose();
-void xrun(void* param);
-void xreset_blink_time();
+void xrun();
+//void xreset_blink_time();
 
 extern unsigned int WINDOW_WIDTH;
 extern unsigned int WINDOW_HEIGHT;

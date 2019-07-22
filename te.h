@@ -7,6 +7,7 @@
 struct _SHARED {
 	pthread_mutex_t* mutex;
 	struct _QUEUE buffer;
+	char* filename;
 };
 
 void shared_lock(struct _SHARED*);

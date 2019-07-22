@@ -3,7 +3,7 @@
 #include "x.h"
 #include "queue.h"
 #include "io.h"
-
+#include <locale.h>
 //#include <unistd.h> //sleep
 #include <pthread.h>
 
@@ -32,8 +32,8 @@ void*
 xAPI(void* param)
 {
 	printf("\nRunning thread xAPI...\n");
-	xinit();
-	xrun(param);
+	xinit(param);
+	xrun();
 	xfree();
 	xclose();
 	printf("\nClosing thread xAPI...\n");
@@ -43,18 +43,32 @@ void*
 ioAPI(void* param)
 {
 	printf("\nRunning thread ioAPI...\n");
-	io_init();
-	io_run(param);
+	io_init(param);
+	io_run();
+	io_print();
 	io_free();
 	printf("\nclosing thread ioAPI...\n");
 }
 
 
 int
-main()
+main(int argc, char** argv)
 {
+	if(setlocale(LC_CTYPE, "") == NULL){
+		printf("cannot set locale\n");
+		return 1;
+	}
 	shared_global.mutex = &mutex;
 	queue_init(&shared_global.buffer, 50);
+	char* filename = "newfile.txt";
+
+	if(argc > 1){
+		shared_global.filename = argv[1];
+	}
+	else
+		shared_global.filename = filename;
+
+	printf("filename: %s\n", shared_global.filename);
 
 	pthread_t thread_xapi_id;
 	pthread_t thread_ioapi_id;
@@ -69,3 +83,38 @@ main()
 	
 	return 0;
 }
+//int
+//main(int argc, char** argv)
+//{
+//	shared_global.mutex = &mutex;
+//	queue_init(&shared_global.buffer, 50);
+//	char* filename = "newfile.txt";
+//
+//	if(argc > 1){
+//		shared_global.filename = argv[1];
+//	}
+//	else
+//		shared_global.filename = filename;
+//
+//	printf("filename: %s\n", shared_global.filename);
+//
+//	//pthread_t thread_xapi_id;
+//	pthread_t thread_ioapi_id;
+//
+//	printf("\nCreating thread xAPI...\n");	
+//	//pthread_create(&thread_xapi_id, NULL, xAPI, &shared_global);
+//	printf("\nRunning thread xAPI...\n");
+//	xinit(&shared_global);
+//	xrun();
+//	xfree();
+//	xclose();
+//
+//	printf("\nCreating thread ioAPI..\n");
+//	pthread_create(&thread_ioapi_id, NULL, ioAPI, &shared_global);
+//	pthread_join(thread_ioapi_id, NULL);
+//
+//	printf("\nClosing thread xAPI...\n");
+//
+//	
+//	return 0;
+//}

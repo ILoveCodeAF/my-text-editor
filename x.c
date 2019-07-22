@@ -6,10 +6,11 @@
 #include "config.h"
 
 #include <X11/Xlib.h>
+#include <X11/keysym.h>
 #include <X11/Xft/Xft.h>
 #include <time.h>
+//#include <locale.h>
 
-typedef struct _SHARED Shared;
 
 typedef struct {
 	Display* dpy;
@@ -21,6 +22,9 @@ typedef struct {
 	XIC xic;
 	XftDraw* draw;
 	Visual* vis;
+
+	int width;
+	int height;
 	int scr;
 	int depth;
 } XWindow;
@@ -33,8 +37,8 @@ XftFont* font;
 XftColor* color_bg;
 XftColor* color_fg;
 
-unsigned int w; //width of window
-unsigned int h; //height of window
+//unsigned int w; //width of window
+//unsigned int h; //height of window
 int col; //
 int row;
 int max_col;
@@ -50,91 +54,32 @@ const float fps = 2; //1 blink / second
 int flag = 0; //0 = draw by color_fg, 1= draw by color_bg
 clock_t period_time, period_time_blink = 1000*fps/2;
 
-void
-xinit()
-{
-	// Open a connection to server
-	if (!(xw.dpy = XOpenDisplay(NULL))){
-		printf("can't open display\n");
-		exit(1);
-	}
-	
-	xw.scr = XDefaultScreen(xw.dpy);
-	xw.depth = XDefaultDepth(xw.dpy, xw.scr);
+typedef struct _SHARED Shared;
+/* share buffer */
+Shared* shared;
 
-	Window parent = XRootWindow(xw.dpy, xw.scr);
-	int xpos = 0, ypos = 0;
+/* use in xrun to exit while loop */
+Bool is_close = False;
 
-	// Create window
-	xw.win = XCreateSimpleWindow(xw.dpy, parent, xpos, ypos, WINDOW_WIDTH, WINDOW_HEIGHT, borderpx, bg, bg);
 
-	xw.buf = XCreatePixmap(xw.dpy, xw.win, WINDOW_WIDTH, WINDOW_HEIGHT, xw.depth);
+void kpress(XEvent*);
+void focus(XEvent*);
+void resize(XEvent*);
 
-	// get MapNotify events
-	XSelectInput(xw.dpy, xw.win, StructureNotifyMask);
-
-	// "map" the window
-	XMapWindow(xw.dpy, xw.win);
-	
-	XGCValues gcvalues;
-	memset(&gcvalues, 0, sizeof(gcvalues));
-	// Create a "Graphics context"
-	GC gc = XCreateGC(xw.dpy, xw.win, 0, &gcvalues);
-
-//	XFillRectangle(xw.dpy, xw.buf, gc, 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
-	// Wait for the MapNotify event
-	for(;;){
-		XEvent e;
-		XNextEvent(xw.dpy, &e);
-		if(e.type == MapNotify)
-			break;
-	}
-	xloadfont();
-
-	xw.vis = DefaultVisual(xw.dpy, xw.scr);
-	xw.cmap = DefaultColormap(xw.dpy, xw.scr);
-
-	xw.draw = XftDrawCreate(xw.dpy, xw.win, xw.vis, xw.cmap);
-	
-	color_bg = (XftColor*) malloc(sizeof(XftColor));
-	color_fg = (XftColor*) malloc(sizeof(XftColor));
-	
-	unsigned int alpha = (1<<16)-1;
-	color_bg->color.red = bg;
-	color_bg->color.green = bg;
-	color_bg->color.blue = bg;
-	color_bg->color.alpha = alpha;
-	color_bg->pixel = 1;
-
-	color_fg->color.red = fg;
-	color_fg->color.green = fg;
-	color_fg->color.blue = fg;
-	color_fg->color.alpha = alpha;
-	color_fg->pixel = 1;
-	
-	xdrawrect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, color_bg);
-	
-	XFlush(xw.dpy);
-
-	XGlyphInfo glyphinfo;
-	XftChar8 c = 'h';
-	XftTextExtents8(xw.dpy, font, &c, 1, &glyphinfo);
-
-	// 
-	xstep = glyphinfo.width+1;
-	ystep = glyphinfo.height*2;
-	xcursor = 2;
-	ycursor = ystep;
-	col = row = 1;
-	max_col = (WINDOW_WIDTH-4)/xstep;
-	max_row = (WINDOW_HEIGHT-4)/ystep;
-}
+// array handler
+void (*handler[LASTEvent])(XEvent*) = {
+	[KeyPress] = kpress,
+	[FocusIn] = focus,
+	[FocusOut] = focus,
+	[ConfigureNotify] = resize
+};
 
 void
 xdrawrect(int x, int y, int w, int h, XftColor* color)
 {
 	XftDrawRect(xw.draw, color, x, y, w, h);
 }
+
 int
 xloadfont(){
 	font = XftFontOpen( xw.dpy, xw.scr, XFT_FAMILY, XftTypeString, 
@@ -159,62 +104,161 @@ void xreset_blink_time(){
 	flag = 1;
 }
 	
+
+
 void
-xrun(void* param)
+xfree()
 {
-	Shared* shared = (Shared*) param;
+	if(color_bg != NULL)
+		XftColorFree(xw.dpy, xw.vis, xw.cmap, color_bg);
+	if(color_fg != NULL)
+		XftColorFree(xw.dpy, xw.vis, xw.cmap, color_fg);
+}
 
-	XSelectInput(xw.dpy, xw.win, KeyPressMask); // | KeyReleaseMask
+void
+xclose()
+{
+	XftFontClose(xw.dpy, font);
+	
+	XDestroyWindow(xw.dpy, xw.win);
 
+	XCloseDisplay(xw.dpy);
+
+}
+	
+void
+xinit(void* param)
+{
+	shared = (Shared*)param;
+
+	color_bg = (XftColor*) malloc(sizeof(XftColor));
+	color_fg = (XftColor*) malloc(sizeof(XftColor));
+	
+	unsigned int alpha = (1<<16)-1;
+	color_bg->color.red = bg;
+	color_bg->color.green = bg;
+	color_bg->color.blue = bg;
+	color_bg->color.alpha = alpha;
+	color_bg->pixel = 1;
+
+	color_fg->color.red = fg;
+	color_fg->color.green = fg;
+	color_fg->color.blue = fg;
+	color_fg->color.alpha = alpha;
+	color_fg->pixel = 1;
+
+
+//if(setlocale(LC_CTYPE, "") == NULL){
+//	printf("cannot set locale\n");
+//	exit(1);
+//}
+	// Open a connection to server
+	if (!(xw.dpy = XOpenDisplay(NULL))){
+		printf("can't open display\n");
+		exit(1);
+	}
+
+	if(!XSupportsLocale()){
+		printf("X does not support Display.\n");
+		exit(1);
+	}
+	if(XSetLocaleModifiers("") == NULL){
+		printf("warning: cannot set locale modifiers.\n");
+	}
+	
+	xw.width = WINDOW_WIDTH;
+	xw.height = WINDOW_HEIGHT;
+	xw.scr = XDefaultScreen(xw.dpy);
+	xw.depth = XDefaultDepth(xw.dpy, xw.scr);
+
+	Window parent = XRootWindow(xw.dpy, xw.scr);
+	int xpos = 0, ypos = 0;
+
+	// Create window
+	xw.win = XCreateSimpleWindow(xw.dpy, parent, xpos, ypos, xw.width, xw.height, borderpx, bg, bg);
+
+	xw.buf = XCreatePixmap(xw.dpy, xw.win, xw.width, xw.height, xw.depth);
+
+	XGCValues gcvalues;
+	memset(&gcvalues, 0, sizeof(gcvalues));
+	// Create a "Graphics context"
+	GC gc = XCreateGC(xw.dpy, xw.win, 0, &gcvalues);
+	XSetForeground(xw.dpy, gc, color_fg->pixel);
+	XSetBackground(xw.dpy, gc, color_bg->pixel);
+	XFillRectangle(xw.dpy, xw.buf, gc, 0, 0, xw.width, xw.height);
+
+
+	if((xw.xim = XOpenIM(xw.dpy, NULL, NULL, NULL)) == NULL){
+		printf("could not open input method\n");
+		exit(1);
+	}
+
+	if((xw.xic = XCreateIC(xw.xim, XNInputStyle,
+					XIMPreeditNothing | XIMStatusNothing,
+					XNClientWindow, xw.win,
+					XNFocusWindow, xw.win,
+					NULL)) == NULL){
+		printf("counld not create input context\n");
+		exit(1);
+	}
+//	XFillRectangle(xw.dpy, xw.buf, gc, 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+	// Wait for the MapNotify event
+	
+	XSelectInput(xw.dpy, xw.win, 
+			ExposureMask | KeyPressMask | StructureNotifyMask);
+	XSetICFocus(xw.xic);
+
+	// "map" the window
+	XMapWindow(xw.dpy, xw.win);
+	
+	XEvent e;
+	for(;;){
+		XNextEvent(xw.dpy, &e);
+		if(XFilterEvent(&e, None))
+			continue;
+		if(e.type == MapNotify)
+			break;
+	}
+
+	xloadfont();
+
+	xw.vis = DefaultVisual(xw.dpy, xw.scr);
+	xw.cmap = DefaultColormap(xw.dpy, xw.scr);
+
+	xw.draw = XftDrawCreate(xw.dpy, xw.win, xw.vis, xw.cmap);
+	
+	
+	xdrawrect(0, 0, xw.width, xw.height, color_bg);
+	
+	//XFlush(xw.dpy);
+
+	XGlyphInfo glyphinfo;
+	XftChar8 c = 'h';
+	XftTextExtents8(xw.dpy, font, &c, 1, &glyphinfo);
+
+	// 
+	xstep = glyphinfo.width+1;
+	ystep = glyphinfo.height*2;
+	xcursor = 2;
+	ycursor = ystep;
+	col = row = 1;
+	max_col = (xw.width-4)/xstep;
+	max_row = (xw.height-4)/ystep;
+}
+
+void
+xrun()
+{	
 	XEvent ev;
-	KeySym ksym = 0;
-	char buffer[32];
-	int bytes_buffer = sizeof(buffer);
-
-	XftChar8 xchar;
-	int not_break = 1;
-	int ret_lookup_string;
-
 	xreset_blink_time();
 
-	while(not_break){
+	while(!is_close){
 		while(XPending(xw.dpy)){
 			XNextEvent(xw.dpy, &ev);
-			
-			if(ev.type == KeyPress){
-				XKeyEvent* e = &ev.xkey;	
-				
-				ret_lookup_string = XLookupString(e, buffer, 
-						bytes_buffer, &ksym, NULL);
-
-				shared_lock(shared);
-				queue_push(&shared->buffer, ksym);
-				shared_unlock(shared);
-
-				// break if press esc
-				if(ksym == XK_Escape)
-					not_break = 0;
-				if(ksym > 31 && ksym < 127){
-
-					xdrawcursor(color_bg);
-		
-					xchar = ksym;		
-					XftDrawString8(xw.draw, color_fg, font,
-							xcursor, ycursor, &xchar, 1);
-		
-					xcursor += xstep;
-					col += 1;
-					if(col > max_col){
-						col = 1;
-						xcursor = 2;
-						ycursor += ystep;
-						row++;
-					}
-					xreset_blink_time();
-					XFlush(xw.dpy);	
-				}
-			}
-		
+			if(XFilterEvent(&ev, None))
+				continue;
+			if(handler[ev.type])
+				(handler[ev.type])(&ev);
 		}	
 		if(blink_count > 0){
 			t2 = clock();
@@ -233,28 +277,92 @@ xrun(void* param)
 				XFlush(xw.dpy);
 				t1 = clock();
 			}
-		}
-	
+		}	
 	}
 }
 
 void
-xfree()
-{
-	if(color_bg != NULL)
-		XftColorFree(xw.dpy, xw.vis, xw.cmap, color_bg);
-	if(color_fg != NULL)
-		XftColorFree(xw.dpy, xw.vis, xw.cmap, color_fg);
+kpress(XEvent* ev){
+	KeySym ksym = 0;
+	char buffer[32] = {0};
+	int bytes_buffer = sizeof(buffer);
+	Status status;
+	XftChar8 xchar;
+	int i = 0;
+	
+	XKeyEvent* e = &ev->xkey;	
+	
+	int len = XmbLookupString(xw.xic, e, buffer, 
+			bytes_buffer, &ksym, &status);
 
+	if(len == 0)
+		return;
+
+	switch(status) {
+	case XBufferOverflow:
+		printf("buffer overflow\n");
+		exit(1);
+	case XLookupNone:
+		break;
+	case XLookupKeySym:
+	case XLookupBoth:
+		if(ksym == XK_Escape){
+			shared_lock(shared);
+			queue_push(&shared->buffer, 27);// esc = 27
+			shared_unlock(shared);
+//		exit(0);
+			is_close = True;
+			return;
+		}
+		if(status == XLookupKeySym)
+			break;
+	case XLookupChars:
+		shared_lock(shared);
+		while(i<len){
+			queue_push(&shared->buffer, buffer[i]);
+			++i;
+		}
+		shared_unlock(shared);
+		printf("%s\n", buffer);
+		break;
+	}	
+//shared_lock(shared);
+//queue_push(&shared->buffer, ksym);
+//shared_unlock(shared);
+//
+//if(ksym > 31 && ksym < 127){
+//
+//	xdrawcursor(color_bg);
+//
+//	xchar = ksym;		
+//	XftDrawString8(xw.draw, color_fg, font,
+//			xcursor, ycursor, &xchar, 1);
+//
+//	xcursor += xstep;
+//	col += 1;
+//	if(col > max_col){
+//		col = 1;
+//		xcursor = 2;
+//		ycursor += ystep;
+//		row++;
+//	}
+//	xreset_blink_time();
+//	XFlush(xw.dpy);	
+//}
 }
 
 void
-xclose()
+focus(XEvent* ev)
 {
-	XftFontClose(xw.dpy, font);
-	
-	XDestroyWindow(xw.dpy, xw.win);
+	if(ev->type == FocusIn){
+		XSetICFocus(xw.xic);
+	}
+	else if(ev->type == FocusOut){
+		XUnsetICFocus(xw.xic);
+	}
+}
 
-	XCloseDisplay(xw.dpy);
-
+void
+resize(XEvent* ev)
+{
 }
