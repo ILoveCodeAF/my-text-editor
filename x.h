@@ -3,7 +3,7 @@
 
 #include <X11/Xft/Xft.h>
 
-void xinit(void* param);
+void xinit();
 //int xloadfont();
 //void xdrawrect(int, int, int, int, XftColor*);
 //void xdrawcursor(XftColor*);

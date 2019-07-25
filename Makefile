@@ -8,7 +8,7 @@ DIR=$(HOME)/.local/bin
 LDLIBS= -lX11 -lXft -lpthread
 CFLAGS= `pkg-config --cflags --libs freetype2`
 
-SRCS=te.c x.c queue.c io.c line.c
+SRCS=x.c queue.c io.c line.c
 OBJS=$(SRCS:.c=.o)
 
 
@@ -21,9 +21,8 @@ te: $(OBJS)
 .c.o:
 	$(CC) -o $@ -c $< $(LDLIBS) $(CFLAGS)
 
-x.o: config.h x.h queue.h te.h
-te.o: x.h queue.h te.h io.h
-io.o: x.h te.h io.h line.h
+x.o: config.h x.h queue.h io.h
+io.o: x.h io.h line.h
 line.o: line.h
 
 

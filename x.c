@@ -1,6 +1,6 @@
 /* my libs */
 #include "queue.h"
-#include "te.h"
+#include "io.h"
 #include "x.h"
 /* config.h for applying patches and the configuration. */
 #include "config.h"
@@ -9,7 +9,7 @@
 #include <X11/keysym.h>
 #include <X11/Xft/Xft.h>
 #include <time.h>
-//#include <locale.h>
+#include <locale.h>
 
 
 typedef struct {
@@ -54,9 +54,9 @@ const float fps = 2; //1 blink / second
 int flag = 0; //0 = draw by color_fg, 1= draw by color_bg
 clock_t period_time, period_time_blink = 1000*fps/2;
 
-typedef struct _SHARED Shared;
-/* share buffer */
-Shared* shared;
+//typedef struct _SHARED Shared;
+/* IO */
+IO io;
 
 /* use in xrun to exit while loop */
 Bool is_close = False;
@@ -127,10 +127,8 @@ xclose()
 }
 	
 void
-xinit(void* param)
+xinit()
 {
-	shared = (Shared*)param;
-
 	color_bg = (XftColor*) malloc(sizeof(XftColor));
 	color_fg = (XftColor*) malloc(sizeof(XftColor));
 	
@@ -148,10 +146,10 @@ xinit(void* param)
 	color_fg->pixel = 1;
 
 
-//if(setlocale(LC_CTYPE, "") == NULL){
-//	printf("cannot set locale\n");
-//	exit(1);
-//}
+	if(setlocale(LC_CTYPE, "") == NULL){
+		printf("cannot set locale\n");
+		exit(1);
+	}
 	// Open a connection to server
 	if (!(xw.dpy = XOpenDisplay(NULL))){
 		printf("can't open display\n");
@@ -282,6 +280,16 @@ xrun()
 }
 
 void
+xwrite(char* buf, int len)
+{
+	int i = 0;
+	while(i < len){
+		io_handle_char(&io, buf[i]);
+		++i;
+	}
+}
+
+void
 kpress(XEvent* ev){
 	KeySym ksym = 0;
 	char buffer[32] = {0};
@@ -307,22 +315,26 @@ kpress(XEvent* ev){
 	case XLookupKeySym:
 	case XLookupBoth:
 		if(ksym == XK_Escape){
-			shared_lock(shared);
-			queue_push(&shared->buffer, 27);// esc = 27
-			shared_unlock(shared);
+//		shared_lock(shared);
+//		queue_push(&shared->buffer, 27);// esc = 27
+//		shared_unlock(shared);
 //		exit(0);
+//		buffer[0] = 27;
+//		xwrite(buffer, 1);
 			is_close = True;
 			return;
 		}
+		
 		if(status == XLookupKeySym)
 			break;
 	case XLookupChars:
-		shared_lock(shared);
-		while(i<len){
-			queue_push(&shared->buffer, buffer[i]);
-			++i;
-		}
-		shared_unlock(shared);
+//	shared_lock(shared);
+//	while(i<len){
+//		queue_push(&shared->buffer, buffer[i]);
+//		++i;
+//	}
+//	shared_unlock(shared);
+		xwrite(buffer, len);
 		printf("%s\n", buffer);
 		break;
 	}	
@@ -365,4 +377,28 @@ focus(XEvent* ev)
 void
 resize(XEvent* ev)
 {
+}
+
+int
+main(int argc, char** argv)
+{
+	if(setlocale(LC_CTYPE, "") == NULL){
+		printf("cannot set locale\n");
+		return 1;
+	}
+	char* filename = "newfile.txt";//do something
+	
+	if(argc > 1){
+		filename = argv[1];
+	}
+
+	io_init(&io, filename);
+	xinit();
+	xrun();
+	xfree();
+	xclose();
+	io_write_file(&io);
+	io_print(&io);
+	io_free(&io);
+	return 0;
 }

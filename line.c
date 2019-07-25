@@ -2,7 +2,7 @@
 #include "stdio.h"
 #include "stdlib.h"
 
-typedef struct _LINE Line;
+//typedef struct _LINE Line;
 
 void
 line_init(Line* line)
@@ -76,14 +76,14 @@ line_add_char(Line* line, char c, int position)
 void
 line_delete(Line* line)
 {
-	line_delete_char(line, line->next+1);
+	line_delete_char(line, line->next);
 }
 
 void
 line_delete_char(Line* line, int position)
 {
-	if(position<line->next){
-		while(position<line->next){
+	if(position-1 < line->next){
+		while(position-1 < line->next){
 			line->characters[position-1] = line->characters[position];
 			position += 1;
 		}

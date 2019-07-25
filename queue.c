@@ -2,12 +2,12 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-typedef struct _QUEUE queue;
+//typedef struct _QUEUE queue;
 /* define type of elements */
-typedef int _TYPE;
+//typedef int _TYPE;
 
 void
-queue_init(queue* q, int size)
+queue_init(Queue* q, int size)
 {
 	if(q == NULL){
 		printf("error: NULL poiter!!\n");
@@ -21,14 +21,14 @@ queue_init(queue* q, int size)
 }
 
 void
-queue_destroy(queue* q)
+queue_destroy(Queue* q)
 {
 	if(q->buffer != NULL)
 		free(q->buffer);
 }
 
 int
-queue_empty(queue* q)
+queue_empty(Queue* q)
 {
 //if(q->front+1 == q->back)
 //	return 1;
@@ -39,7 +39,7 @@ queue_empty(queue* q)
 }
 
 int
-queue_full(queue* q)
+queue_full(Queue* q)
 {
 //if(q->front == q->back+1)
 //	return 1;
@@ -50,7 +50,7 @@ queue_full(queue* q)
 }
 
 void
-queue_push(queue* q, _TYPE n)
+queue_push(Queue* q, _TYPE n)
 {
 	if(!queue_full(q)){
 		if(q->back == q->max_size){
@@ -63,7 +63,7 @@ queue_push(queue* q, _TYPE n)
 }
 
 _TYPE
-queue_pop(queue* q)
+queue_pop(Queue* q)
 {
 	if(!queue_empty(q)){
 		if(q->front == q->max_size-1){
@@ -78,7 +78,7 @@ queue_pop(queue* q)
 }
 
 int
-queue_size(queue* q)
+queue_size(Queue* q)
 {
 	return q->size;
 }

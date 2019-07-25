@@ -1,34 +1,33 @@
-#ifndef __IO_H_INCLUDE__
-#define __IO_H_INCLUDE__
+#ifndef __IO_H_INCLUDED__
+#define __IO_H_INCLUDED__
 
 #include "line.h"
 #include "stdio.h"
 
-typedef struct _LINE Line;
+//typedef struct _LINE Line;
 
-struct _LINE_LINK_LIST{
+typedef struct _LINE_LINK_LIST{
 	Line line;
 	struct _LINE_LINK_LIST* prev;
 	struct _LINE_LINK_LIST* next;
 	
-};
+} LLL;
 
-struct _IO{
+typedef struct _IO{
 	int num_line;
-	int io_input_cursor;
+	int input_cursor;
 	struct _LINE_LINK_LIST* root;
 	struct _LINE_LINK_LIST* current;
 	FILE* file_pointer;
 	char* filename;
-};
+} IO;
 
-void io_init(void* param);
-void io_run();
-//void io_open_file(char* mode);
-//void io_write_file();
-//void io_read_file();
-//void io_close_file();
-void io_put_char(char c);
-void io_free();
-void io_print();
+void io_init(IO* io, char* filename);
+void io_open_file(IO* io, char* mode);
+void io_write_file(IO*);
+void io_read_file(IO*);
+void io_close_file(IO*);
+void io_handle_char(IO* io, char c);
+void io_free(IO* io);
+void io_print(IO* io);
 #endif
