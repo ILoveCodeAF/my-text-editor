@@ -10,6 +10,7 @@ typedef struct _LINE{
 void line_init(Line* line);
 void line_inc_max_size(Line* line);
 int line_length(Line* line);
+char* line_get_chars(Line* line);
 void line_add(Line* line, char c);
 void line_add_char(Line* line, char c, int position);//count from 1;
 void line_delete(Line* line);

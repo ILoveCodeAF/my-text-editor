@@ -30,4 +30,7 @@ void io_close_file(IO*);
 void io_handle_char(IO* io, char c);
 void io_free(IO* io);
 void io_print(IO* io);
+int io_length_line(IO* io, int line);// 0 = current, 1 = next, -1 = prev line //return -1 (line do not exist)
+void io_write(IO* io, char* buffer, int len);
+
 #endif

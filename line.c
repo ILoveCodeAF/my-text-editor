@@ -37,12 +37,19 @@ line_inc_max_size(Line* line)
 //}
 	free(line->characters);
 	line->characters = temp;
+	temp = NULL;
 }
 
 int
 line_length(Line* line)
 {
 	return line->next;
+}
+
+char*
+line_get_chars(Line* line)
+{
+	return line->characters;
 }
 
 void
@@ -60,16 +67,14 @@ line_add_char(Line* line, char c, int position)
 	}
 	if(line->next == line->max_size)
 		line_inc_max_size(line);
-	if(position-1 == line->next)
-		line->characters[line->next] = c;
-	else{
+	if(position-1 < line->next){
 		int i = line->next;
 		while(i>=position){
 			line->characters[i] = line->characters[i-1];
 			--i;
-		}
-		line->characters[position-1] = c;
+		}	
 	}
+	line->characters[position-1] = c;
 	line->next += 1;
 }
 
@@ -82,6 +87,8 @@ line_delete(Line* line)
 void
 line_delete_char(Line* line, int position)
 {
+	if(position < 1)
+		return;
 	if(position-1 < line->next){
 		while(position-1 < line->next){
 			line->characters[position-1] = line->characters[position];

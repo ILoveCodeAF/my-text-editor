@@ -30,7 +30,7 @@ io_handle_char(IO* io, char c)
 				free(io->current->next);
 				io->current->next = NULL;
 				line_delete(&io->current->line);
-				io->input_cursor -= 1;
+				io->input_cursor = io->current->line.next + 1;
 			}
 		}
 		return;
@@ -124,5 +124,44 @@ io_init(IO* io, char* filename)
 	io->num_line = 1;
 	io->input_cursor = 1;
 	io_read_file(io);
+
+	LLL* temp = io->root;
+	while(temp != NULL && line_length(&temp->line) > 0){
+		xwrite(line_get_chars(&temp->line), line_length(&temp->line));
+		temp = temp->next;
+	}
+	temp = NULL;
 }
 
+int
+io_length_line(IO* io, int line)
+{
+	LLL* temp = io->current;
+	if(line > 0){
+		while(line != 0 && temp->next != NULL){
+			line -= 1;
+			temp = temp->next;
+		}
+		if(line != 0)
+			return -1;
+	}
+	if(line < 0){
+		while(line != 0 && temp->prev != NULL){
+			line += 1;
+			temp = temp->prev;
+		}
+		if(line != 0)
+			return -1;
+	}
+	return line_length(&temp->line);
+}
+
+void
+io_write(IO* io, char* buffer, int len)
+{
+	int i = 0;
+	while(i < len){
+		io_handle_char(io, buffer[i]);
+		i += 1;
+	}
+}

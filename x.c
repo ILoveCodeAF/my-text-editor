@@ -1,7 +1,7 @@
 /* my libs */
-#include "queue.h"
 #include "io.h"
 #include "x.h"
+#include "unicode.h"
 /* config.h for applying patches and the configuration. */
 #include "config.h"
 
@@ -10,6 +10,20 @@
 #include <X11/Xft/Xft.h>
 #include <time.h>
 #include <locale.h>
+
+
+
+// #define BYTE_PATTERN "%c%c%c%c%c%c%c%c"
+// #define BYTE_BINARY(byte) \
+// 	(byte & 0x80? '1':'0'), \
+// 	(byte & 0x40? '1':'0'), \
+// 	(byte & 0x20? '1':'0'), \
+// 	(byte & 0x10? '1':'0'), \
+// 	(byte & 0x08? '1':'0'), \
+// 	(byte & 0x04? '1':'0'), \
+// 	(byte & 0x02? '1':'0'), \
+// 	(byte & 0x01? '1':'0')
+
 
 
 typedef struct {
@@ -92,18 +106,70 @@ xdrawcursor(XftColor* color)
 	xdrawrect(xcursor, ycursor-ystep*2/3, xstep-1, ystep, color);
 }
 
-void
-xredraw()
-{
-}
-
 void xreset_blink_time(){
 	xdrawcursor(color_fg);
 	t1 = clock();
 	blink_count = blink_times;
 	flag = 1;
 }
-	
+
+void
+xdraw(char* c, int len)
+{
+	xdrawcursor(color_bg);
+
+	if(len == 1){
+		if( *c == '\r' || *c == '\n' ){//return || enter
+			col = 1;
+			row += 1;
+			xcursor = 2;
+			ycursor += ystep;
+			xreset_blink_time();
+			return;
+		}
+		if( *c == '\b' ){ //backspace
+			int current_line_length = io_length_line(&io, 0);
+			if(current_line_length == 0){
+				int prev_line_length = io_length_line(&io, -1)-1;
+				if(prev_line_length != -1){
+					row -= 1;
+					col = prev_line_length % max_col + 1;
+					xcursor = (col-1)*xstep + 2;
+					ycursor -= ystep;
+				}
+			}
+			else{
+				if(current_line_length % max_col){
+					col -= 1;
+					xcursor -= xstep;
+				}
+				else{
+					row -= 1;
+					col = max_col;
+					xcursor = (col-1)*xstep + 1;
+					ycursor -= ystep;
+				}
+			}
+			xdrawcursor(color_bg);
+			xreset_blink_time();
+			return;
+		}
+	}
+
+	XftDrawStringUtf8(xw.draw, color_fg, font,
+			xcursor, ycursor, c, len);
+
+	xcursor += xstep;
+	col += 1;
+	if(col > max_col){
+		col = 1;
+		xcursor = 2;
+		ycursor += ystep;
+		row++;
+	}
+	xreset_blink_time();
+	XFlush(xw.dpy);	
+}
 
 
 void
@@ -282,10 +348,20 @@ xrun()
 void
 xwrite(char* buf, int len)
 {
+//int i = 0;
+//while(i < len){
+//	io_handle_char(&io, buf[i]);
+//	// printf(BYTE_PATTERN"\n", BYTE_BINARY(buf[i]));
+//	++i;
+//}
+//	xdraw(buf, len);
 	int i = 0;
-	while(i < len){
-		io_handle_char(&io, buf[i]);
-		++i;
+	int len_char = 0;
+	while(i<len){
+		len_char = utf8_len_char(buf+i);
+		xdraw(buf+i, len_char);
+		// printf("%.*s : %d\n", len_char, buf+i, len_char);
+		i += len_char;
 	}
 }
 
@@ -302,6 +378,9 @@ kpress(XEvent* ev){
 	
 	int len = XmbLookupString(xw.xic, e, buffer, 
 			bytes_buffer, &ksym, &status);
+//int len = Xutf8LookupString(xw.xic, e, buffer, 
+//		bytes_buffer, &ksym, &status);
+
 
 	if(len == 0)
 		return;
@@ -335,6 +414,7 @@ kpress(XEvent* ev){
 //	}
 //	shared_unlock(shared);
 		xwrite(buffer, len);
+		io_write(&io, buffer, len);
 		printf("%s\n", buffer);
 		break;
 	}	
@@ -344,23 +424,6 @@ kpress(XEvent* ev){
 //
 //if(ksym > 31 && ksym < 127){
 //
-//	xdrawcursor(color_bg);
-//
-//	xchar = ksym;		
-//	XftDrawString8(xw.draw, color_fg, font,
-//			xcursor, ycursor, &xchar, 1);
-//
-//	xcursor += xstep;
-//	col += 1;
-//	if(col > max_col){
-//		col = 1;
-//		xcursor = 2;
-//		ycursor += ystep;
-//		row++;
-//	}
-//	xreset_blink_time();
-//	XFlush(xw.dpy);	
-//}
 }
 
 void
@@ -392,8 +455,8 @@ main(int argc, char** argv)
 		filename = argv[1];
 	}
 
-	io_init(&io, filename);
 	xinit();
+	io_init(&io, filename);
 	xrun();
 	xfree();
 	xclose();
