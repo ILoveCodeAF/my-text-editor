@@ -32,5 +32,7 @@ void io_free(IO* io);
 void io_print(IO* io);
 int io_length_line(IO* io, int line);// 0 = current, 1 = next, -1 = prev line //return -1 (line do not exist)
 void io_write(IO* io, char* buffer, int len);
+//int io_num_chars(IO*);//current line from begin to cursor
+int io_num_chars_of_line(IO* io, int line, int position);// 0 = current, 1 = nest -1 = prev, return -1 if( line do not exist) 
 
 #endif

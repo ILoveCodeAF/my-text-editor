@@ -22,7 +22,7 @@ te: $(OBJS)
 	$(CC) -o $@ -c $< $(LDLIBS) $(CFLAGS)
 
 x.o: config.h x.h io.h unicode.h
-io.o: x.h io.h line.h
+io.o: x.h io.h line.h unicode.h
 line.o: line.h
 unicode.o: stack.h
 stack.o:

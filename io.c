@@ -2,6 +2,7 @@
 #include "io.h"
 #include "line.h"
 #include "x.h"
+#include "unicode.h"
 
 #include <time.h>
 #include <stdio.h>
@@ -22,7 +23,7 @@
 // 	(byte & 0x01? '1':'0')
 
 void
-backspace(IO* io)
+io_backspace(IO* io)
 {
 	if(line_length(&io->current->line) > 0 && io->input_cursor > 1){
 		// printf(BYTE_PATTERN"\n", BYTE_BINARY(line_get_char(&io->current->line, io->input_cursor-1)));
@@ -55,7 +56,7 @@ backspace(IO* io)
 }
 
 void
-newline(IO* io)
+io_newline(IO* io)
 {
 	io->current->next = (LLL*) malloc(sizeof(LLL));
 	io->current->next->prev = io->current;
@@ -74,13 +75,13 @@ io_handle_char(IO* io, char c)
 	if( c == '\r' )//return | enter
 		c = '\n';
 	if( c == '\b' ){//backspace
-		backspace(io);
+		io_backspace(io);
 		return;
 	}
 	line_add_char(&io->current->line, c, io->input_cursor);
 	io->input_cursor += 1;
 	if(c == '\n'){
-		newline(io);
+		io_newline(io);
 	}
 	//if c == newline
 	//create new line
@@ -200,4 +201,37 @@ io_write(IO* io, char* buffer, int len)
 		io_handle_char(io, buffer[i]);
 		i += 1;
 	}
+}
+
+int
+io_num_chars_of_line(IO* io, int line, int position)
+{
+	LLL* temp = io->current;
+	if(line > 0){
+		while(line != 0 && temp->next != NULL){
+			temp = temp->next;
+			line -= 1;
+		}
+		if(line != 0)
+			return -1;
+	}
+	else if(line < 0){
+		while(line != 0 && temp->prev != NULL){
+			temp = temp->prev;
+			line += 1;
+		}
+		if(line != 0)
+			return -1;
+	}
+	int num_char = 0;
+	char* l = line_get_chars(&temp->line);
+
+	int i = 0;
+	int len_char = 0;
+	while(i < position-1){
+		len_char = utf8_len_char(l+i);
+		i += len_char;
+		num_char += 1;
+	}
+	return num_char;
 }

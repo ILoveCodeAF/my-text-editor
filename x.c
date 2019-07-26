@@ -114,43 +114,58 @@ void xreset_blink_time(){
 }
 
 void
+xnewline()
+{
+	col = 1;
+	row += 1;
+	xcursor = 2;
+	ycursor += ystep;
+}
+
+void
+xbackspace()
+{
+	int num_chars_of_current_line = 
+		io_num_chars_of_line(&io, 0, io.input_cursor);
+	if(num_chars_of_current_line == 0){
+		int prev_line_length = io_length_line(&io, -1);
+		if(prev_line_length != -1){
+			int num_chars_of_prev_line = 
+				io_num_chars_of_line(&io, -1, prev_line_length+1)-1;
+			row -= 1;
+			col = num_chars_of_prev_line % max_col + 1;
+			xcursor = (col-1)*xstep + 2;
+			ycursor -= ystep;
+		}
+	}
+	else{
+		if(num_chars_of_current_line % max_col){
+			col -= 1;
+			xcursor -= xstep;
+		}
+		else{
+			row -= 1;
+			col = max_col;
+			xcursor = (col-1)*xstep + 1;
+			ycursor -= ystep;
+		}
+	}
+	xdrawcursor(color_bg);
+}
+
+void
 xdraw(char* c, int len)
 {
 	xdrawcursor(color_bg);
 
 	if(len == 1){
 		if( *c == '\r' || *c == '\n' ){//return || enter
-			col = 1;
-			row += 1;
-			xcursor = 2;
-			ycursor += ystep;
+			xnewline();
 			xreset_blink_time();
 			return;
 		}
 		if( *c == '\b' ){ //backspace
-			int current_line_length = io_length_line(&io, 0);
-			if(current_line_length == 0){
-				int prev_line_length = io_length_line(&io, -1)-1;
-				if(prev_line_length != -1){
-					row -= 1;
-					col = prev_line_length % max_col + 1;
-					xcursor = (col-1)*xstep + 2;
-					ycursor -= ystep;
-				}
-			}
-			else{
-				if(current_line_length % max_col){
-					col -= 1;
-					xcursor -= xstep;
-				}
-				else{
-					row -= 1;
-					col = max_col;
-					xcursor = (col-1)*xstep + 1;
-					ycursor -= ystep;
-				}
-			}
-			xdrawcursor(color_bg);
+			xbackspace();
 			xreset_blink_time();
 			return;
 		}
