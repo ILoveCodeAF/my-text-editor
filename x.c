@@ -415,7 +415,6 @@ kpress(XEvent* ev){
 //	shared_unlock(shared);
 		xwrite(buffer, len);
 		io_write(&io, buffer, len);
-		printf("%s\n", buffer);
 		break;
 	}	
 //shared_lock(shared);

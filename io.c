@@ -10,7 +10,61 @@
 //typedef struct _IO IO;
 //typedef struct _SHARED Shared;
 
+#define BYTE_PATTERN "%c%c%c%c%c%c%c%c"
+#define BYTE_BINARY(byte) \
+	(byte & 0x80? '1':'0'), \
+	(byte & 0x40? '1':'0'), \
+	(byte & 0x20? '1':'0'), \
+	(byte & 0x10? '1':'0'), \
+	(byte & 0x08? '1':'0'), \
+	(byte & 0x04? '1':'0'), \
+	(byte & 0x02? '1':'0'), \
+	(byte & 0x01? '1':'0')
 
+void
+backspace(IO* io)
+{
+	if(line_length(&io->current->line) > 0 && io->input_cursor > 1){
+		// printf(BYTE_PATTERN"\n", BYTE_BINARY(line_get_char(&io->current->line, io->input_cursor-1)));
+		// printf("next:%d io %d\n", io->current->line.next, io->input_cursor);
+		if(line_get_char(&io->current->line, io->input_cursor-1) & 0x80)
+		{
+			while((line_get_char(&io->current->line, io->input_cursor-1) 
+					& 0x40) == 0){
+				line_delete_char(&io->current->line, io->input_cursor-1);
+				io->input_cursor -= 1;
+			}
+			// printf("y\n");
+			line_delete_char(&io->current->line, io->input_cursor-1);
+			io->input_cursor -= 1;
+		}
+		else{
+			line_delete(&io->current->line);
+			io->input_cursor -= 1;
+		}
+	}
+	else{
+		if(io->current->prev != NULL){
+			io->current = io->current->prev;
+			free(io->current->next);
+			io->current->next = NULL;
+			line_delete(&io->current->line);
+			io->input_cursor = io->current->line.next + 1;
+		}
+	}
+}
+
+void
+newline(IO* io)
+{
+	io->current->next = (LLL*) malloc(sizeof(LLL));
+	io->current->next->prev = io->current;
+	io->current = io->current->next;
+	io->current->next = NULL;
+	line_init(&io->current->line);
+	io->num_line++;
+	io->input_cursor = 1;
+}
 
 void
 io_handle_char(IO* io, char c)
@@ -20,31 +74,13 @@ io_handle_char(IO* io, char c)
 	if( c == '\r' )//return | enter
 		c = '\n';
 	if( c == '\b' ){//backspace
-		if(line_length(&io->current->line) > 0){
-			line_delete(&io->current->line);
-			io->input_cursor -= 1;
-		}
-		else{
-			if(io->current->prev != NULL){
-				io->current = io->current->prev;
-				free(io->current->next);
-				io->current->next = NULL;
-				line_delete(&io->current->line);
-				io->input_cursor = io->current->line.next + 1;
-			}
-		}
+		backspace(io);
 		return;
 	}
 	line_add_char(&io->current->line, c, io->input_cursor);
 	io->input_cursor += 1;
 	if(c == '\n'){
-		io->current->next = (LLL*) malloc(sizeof(LLL));
-		io->current->next->prev = io->current;
-		io->current = io->current->next;
-		io->current->next = NULL;
-		line_init(&io->current->line);
-		io->num_line++;
-		io->input_cursor = 1;
+		newline(io);
 	}
 	//if c == newline
 	//create new line

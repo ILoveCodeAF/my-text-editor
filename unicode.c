@@ -17,7 +17,7 @@ wchar_to_utf8(uint character)
 	int first_bit = 2;
 	char c = 0;
 	while(character >= ((1 << (8-first_bit)) - 1)){
-		c = (((1<<6) - 1) & character) | (1<<7);
+		c = (((1<<6) - 1) & character) | (0x80);//128 || 1<<7
 		character >>= 6;
 		first_bit += 1;
 		stack_push(&stack, c);
@@ -75,7 +75,7 @@ utf8_string_to_wchar_string(char* characters)
 uint
 utf8_len_char(char* character)
 {
-	int mask = (1 << 7);
+	int mask = (1 << 7);// 128 || 0x80
 	if(!(mask & *character))
 		return 1;
 	int len = 0;
