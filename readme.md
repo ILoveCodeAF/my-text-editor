@@ -2,8 +2,7 @@
 						ControlMask == 
 						(e->state & ~(Mod2Mask|(1<<13))))//~ignoremod))
 					printf("hello\n");
-- ui
-- algorithms
-	- alignment
-	- 
- 
+
+lack of function:
+- copy/cut/paste
+- move input cursor
