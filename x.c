@@ -122,16 +122,26 @@ xnewline()
 	ycursor += ystep;
 }
 
+int
+xlength_of_line(int line, int position){
+	int length = io_num_chars_of_line(&io, line, position);
+	if(length > 0 && tab-1 > 0){
+		length = length + 
+			(tab-1)*io_num_char_of_line(&io, line, "\t", 1, position);
+	}
+	return length;
+}
+
 void
-xbackspace()
+xdelete_prev_char()
 {
 	int num_chars_of_current_line = 
-		io_num_chars_of_line(&io, 0, io.input_cursor);
+		xlength_of_line(0, io.input_cursor);
 	if(num_chars_of_current_line == 0){
 		int prev_line_length = io_length_line(&io, -1);
 		if(prev_line_length != -1){
 			int num_chars_of_prev_line = 
-				io_num_chars_of_line(&io, -1, prev_line_length+1)-1;
+				xlength_of_line(-1, prev_line_length+1)-1;
 			row -= 1;
 			col = num_chars_of_prev_line % max_col + 1;
 			xcursor = (col-1)*xstep + 2;
@@ -154,23 +164,21 @@ xbackspace()
 }
 
 void
-xdraw(char* c, int len)
-{
-	xdrawcursor(color_bg);
-
-	if(len == 1){
-		if( *c == '\r' || *c == '\n' ){//return || enter
-			xnewline();
-			xreset_blink_time();
-			return;
-		}
-		if( *c == '\b' ){ //backspace
-			xbackspace();
-			xreset_blink_time();
-			return;
+xbackspace(){
+	if(io_get_byte(&io) == '\t'){
+		int i = 0;
+		while(i < tab){
+			xdelete_prev_char();
+			++i;
 		}
 	}
+	else
+		xdelete_prev_char();
+}
 
+void
+xdraw(char* c, int len)
+{
 	XftDrawStringUtf8(xw.draw, color_fg, font,
 			xcursor, ycursor, c, len);
 
@@ -183,9 +191,34 @@ xdraw(char* c, int len)
 		row++;
 	}
 	xreset_blink_time();
-	XFlush(xw.dpy);	
+//	XFlush(xw.dpy);	
 }
 
+void
+xhandle_char(char* c, int len){
+	xdrawcursor(color_bg);
+	int i = 0;
+	switch(*c){
+		case '\r':// return | enter
+		case '\n':
+			xnewline();
+			xreset_blink_time();
+			break;
+		case '\b'://backspace
+			xbackspace();
+			xreset_blink_time();
+			break;
+		case '\t'://tab
+			while(i < tab){
+				xdrawcursor(color_bg);
+				xdraw(" ", 1);
+				++i;
+			}
+			break;
+		default:
+			xdraw(c, len);
+	}
+}
 
 void
 xfree()
@@ -374,7 +407,7 @@ xwrite(char* buf, int len)
 	int len_char = 0;
 	while(i<len){
 		len_char = utf8_len_char(buf+i);
-		xdraw(buf+i, len_char);
+		xhandle_char(buf+i, len_char);
 		// printf("%.*s : %d\n", len_char, buf+i, len_char);
 		i += len_char;
 	}

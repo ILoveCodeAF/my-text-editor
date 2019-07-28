@@ -34,7 +34,8 @@ int io_length_line(IO* io, int line);// 0 = current, 1 = next, -1 = prev line //
 void io_write(IO* io, char* buffer, int len);
 //int io_num_chars(IO*);//current line from begin to cursor
 int io_num_chars_of_line(IO* io, int line, int position);// 0 = current, 1 = nest -1 = prev, return -1 if( line do not exist) 
-int io_num_tab_of_line(IO* io, int line, int position);
+int io_num_char_of_line(IO* io, int line, char* c, int len, int position);
 Line* io_get_line(IO* io, int line); //0 = current, 1 = next, -1 = prev ..; return null if not exist
+char io_get_byte(IO* io);
 
 #endif

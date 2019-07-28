@@ -209,9 +209,35 @@ io_num_chars_of_line(IO* io, int line, int position)
 }
 
 int
-io_num_tab_of_line(IO* io, int line, int position)
-{
+str_cmp(char* s1, char* s2, int len){
+	int i = 0;
+	while(i < len){
+		if(*(s1+i) != *(s2+i))
+			return 0;
+		++i;
+	}
+	return 1;
+}
 
+int
+io_num_char_of_line(IO* io, int line, char* c, int len, int position)
+{
+	Line* l = io_get_line(io, line);
+	if(l == NULL)
+		return -1;
+	int num_char = 0;
+	char* str = line_get_chars(l);
+	int i = 0;
+	int len_char = 0;
+	while(i < position-1){
+		len_char = utf8_len_char(str+i);
+		if(len_char == len){
+			if(str_cmp(str+i, c, len))
+				num_char++;
+		}
+		i += len_char;
+	}
+	return num_char;
 }
 
 Line*
@@ -235,4 +261,12 @@ io_get_line(IO* io, int line)
 			return NULL;
 	}
 	return &temp->line;
+}
+
+char
+io_get_byte(IO* io)
+{
+	if(io->input_cursor < 2)
+		return 0;
+	return io->current->line.characters[io->input_cursor-2];
 }
