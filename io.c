@@ -170,29 +170,6 @@ io_init(IO* io, char* filename)
 	temp = NULL;
 }
 
-int
-io_length_line(IO* io, int line)
-{
-	LLL* temp = io->current;
-	if(line > 0){
-		while(line != 0 && temp->next != NULL){
-			line -= 1;
-			temp = temp->next;
-		}
-		if(line != 0)
-			return -1;
-	}
-	if(line < 0){
-		while(line != 0 && temp->prev != NULL){
-			line += 1;
-			temp = temp->prev;
-		}
-		if(line != 0)
-			return -1;
-	}
-	return line_length(&temp->line);
-}
-
 void
 io_write(IO* io, char* buffer, int len)
 {
@@ -204,7 +181,41 @@ io_write(IO* io, char* buffer, int len)
 }
 
 int
+io_length_line(IO* io, int line)
+{
+	Line* l = io_get_line(io, line);
+	if(l == NULL)
+		return -1;
+	return line_length(l);
+}
+
+int
 io_num_chars_of_line(IO* io, int line, int position)
+{
+	Line* l = io_get_line(io, line);
+	if(l == NULL)
+		return -1;
+	int num_char = 0;
+	char* c = line_get_chars(l);
+
+	int i = 0;
+	int len_char = 0;
+	while(i < position-1){
+		len_char = utf8_len_char(c+i);
+		i += len_char;
+		num_char += 1;
+	}
+	return num_char;
+}
+
+int
+io_num_tab_of_line(IO* io, int line, int position)
+{
+
+}
+
+Line*
+io_get_line(IO* io, int line)
 {
 	LLL* temp = io->current;
 	if(line > 0){
@@ -213,7 +224,7 @@ io_num_chars_of_line(IO* io, int line, int position)
 			line -= 1;
 		}
 		if(line != 0)
-			return -1;
+			return NULL;
 	}
 	else if(line < 0){
 		while(line != 0 && temp->prev != NULL){
@@ -221,17 +232,7 @@ io_num_chars_of_line(IO* io, int line, int position)
 			line += 1;
 		}
 		if(line != 0)
-			return -1;
+			return NULL;
 	}
-	int num_char = 0;
-	char* l = line_get_chars(&temp->line);
-
-	int i = 0;
-	int len_char = 0;
-	while(i < position-1){
-		len_char = utf8_len_char(l+i);
-		i += len_char;
-		num_char += 1;
-	}
-	return num_char;
+	return &temp->line;
 }
