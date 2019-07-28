@@ -5,7 +5,7 @@ RM=rm -f
 CP=cp -f
 DIR=$(HOME)/.local/bin
 
-LDLIBS= -lX11 -lXft -lpthread
+LDLIBS= -lX11 -lXft
 CFLAGS= `pkg-config --cflags --libs freetype2`
 
 SRCS=x.c io.c line.c unicode.c stack.c
